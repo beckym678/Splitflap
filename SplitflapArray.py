@@ -52,9 +52,13 @@ from time import sleep
 
 
 
+
 seq_pointer=[0,1,2,3,4,5,6,7]
 stepper_obj = []
 
+clockPinout = Pin(18, Pin.OUT)
+latchPinout = Pin(17, Pin.OUT)
+dataPinout = Pin(16, Pin.OUT)
 
 #The 8 possible commands to send to the motor 
 arrSeq = ['0001',\
@@ -66,50 +70,102 @@ arrSeq = ['0001',\
           '1000',\
           '1001']
 
+motorSequenceNibbles = ["0001", "0011", "0010", "0110", "0100", "1100", "1000", "1001"]
+
+motorStepWord = "00010011001001100100110010001001"
+zeroWord = "00000000000000000000000000000000"
+
 class Splitflap:
+    
+    
+    atHome = False
     def __init__(self, hall_pin, motor_offset=0):  #Note - to control these individually, you'd need to spec a data_pin.
-        
+        print("Initializing a Splitflap Display with Hall Pin", hall_pin)
         global DIN
         DIN = Pin(hall_pin,Pin.IN)
+        print("Defined DIN as", DIN)
 
-        #Note - this is the offset needed for steps on a specific splitflap module to have letters match up.  Assumed at no offset.
+        #Note - this is the offset needed for steps on a specific splitflap module to have letters match up.
+        #Assumed at no offset.
         global offset
-        offset = motor_offset 
+        offset = motor_offset
+        print("offset =", offset)
+        atHome = False
         
 
-#    def displayChar(character):
+    def displayChar(self, character):
         #This will determine the correct amount of motor rotation to display the input character
         #It will return an array of nibbles? bytes? to send to the shift registers.
-        
-    """def findHome():
+        print("in displayChar")
+       
+    def findHome(self):
         #read the hall sensor to check on if we found home
-        if hall==0:
-            self.atHome = True
+        print("In findHome")
+        print("DIN = ", DIN.value())
+        while (DIN.value() == 1):
+            print("DIN =", DIN.value())
+            self.moveMyFlaps(1)
+            utime.sleep(0.1)
             
-        if self.atHome:
-            return 00000000
-        elif:
-            #return the next part of the motor rotation sequence"""
+        self.atHome = True
+        print("thinks we're at home")
+        return 
+
+         
+         
+    #Input distances is an array of ints
+    def moveMyFlaps(self, distance):
+        outputword = ""
+        numMotors = 1
+        #loop for the distance input
+        for steps in range(distance):
+            outputword += motorStepWord
+                
+        self.__shift_update(outputword)
+        utime.sleep(3)
+        
+        #INTERNAL METHOD - do not call from outside this class.
+    #Sends data to the shift register.  data, clock. and latch are the defined pins.
+    def __shift_update(self, input):
+        #put latch down to start data sending
+        clockPinout.value(0)
+        latchPinout.value(0)
+        clockPinout.value(1)
+        #load data in reverse order
+        print("Output word = ", input)
+        for n in range(len(input)):
+            for i in range(3, -1, -1):
+                clockPinout.value(0)
+                dataPinout.value(int(motorSequenceNibbles[i]))
+                print("Using value ", input[i], " for output # ", i)
+                clockPinout.value(1)
+            print("Nibble done")
+            clockPinout.value(0)
+            latchPinout.value(1)
+            clockPinout.value(1)
+        print(" --- ")
+        #put latch up to store data on register
+        clockPinout.value(0)
+        latchPinout.value(1)
+        clockPinout.value(1)
+        return  
         
 """
 ****************************
 """
 
-atHome = False
-hallPins = []
-
+"""
 
 class SplitflapArray:
-    def _init_(self, *displayDevices, dataPINnum = 5, clockPINnum=14, latchPINnum = 15):  #Hopefullt this means that to create a splitflap array object I need to input an array of splitflaps.
         #I'm pretty sure I have the syntax wrong.
         #determines the pico pin that the shift registers are attached to.
-
-        
+    def __init__(self, displayDevices:Splitflap, dataPINnum = 16, clockPINnum=18, latchPINnum = 17):
+    
         global devices
         devices = displayDevices
         
         global hallPins
-        hallPins = self.getHallPins()
+        self.getHallPins()
         
 
         global dataPIN
@@ -123,21 +179,21 @@ class SplitflapArray:
 
 
         
-    def getHallPins(self):
+    def getHallPins():
         #Returns an array of pins to check hall sensors for.  First letter is array item 0.
         
         for a in range(len(self.devices)):
-            hallPinStorage[a] = self.devices[a].DIN
-        return hallPinStorage
+            hallPins[a] = self.devices[a].DIN
+        
         
             
   
-    def findHome(self):
+    def findHome():
         #function tells each motor to move UNTIL its hall pin is (de)activted.
         #pointer tells me which motor movement command I'm currently on.
         pointer = 0
         
-        while not(self.hallPins.all() == 0):
+        while not(hallPin.all() == 0):
             command = ""
         
             #cycle through each display to see if it still needs to move, and make a string
@@ -161,9 +217,10 @@ class SplitflapArray:
                 pointer = 0
             else:
                 pointer += 1
-        print("Found home for all motors")
+            
+            print("Found home for all motors")
     
-    def shiftCommand(self, input):
+    def shiftCommand(input):
       #put latch down to start data sending
       clockPIN.value(0)
       latchPIN.value(0)
@@ -181,3 +238,17 @@ class SplitflapArray:
       clockPIN.value(0)
       latchPIN.value(1)
       clockPIN.value(1)
+        
+        
+            
+        
+            
+        
+                
+"""
+        
+        
+                    
+            
+        
+
